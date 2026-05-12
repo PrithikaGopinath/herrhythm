@@ -4,15 +4,20 @@ import { supabase } from "../supabaseClient";
 export default function Home({ session, setActivePage }) {
   const [logs, setLogs] = useState([]);
   const [todayLogged, setTodayLogged] = useState(false);
+  const [count, setCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const name =
     session.user.user_metadata?.full_name?.split(" ")[0] ||
     session.user.email?.split("@")[0] ||
     "there";
-
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  useEffect(() => {
+    setTimeout(() => setMounted(true), 50);
+  }, []);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -26,6 +31,17 @@ export default function Home({ session, setActivePage }) {
         setLogs(data);
         const today = new Date().toISOString().split("T")[0];
         setTodayLogged(data.some((l) => l.log_date === today));
+        // count up animation
+        let start = 0;
+        const end = data.length;
+        if (end > 0) {
+          const timer = setInterval(() => {
+            start++;
+            setCount(start);
+            if (start === end) clearInterval(timer);
+          }, 120);
+          return () => clearInterval(timer);
+        }
       }
     };
     fetchLogs();
@@ -53,10 +69,62 @@ export default function Home({ session, setActivePage }) {
 
   return (
     <div className="page">
-      <p className="greeting">{greeting},</p>
-      <p className="greeting-name">{name} 💜</p>
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes popIn {
+          0% { transform: scale(0.8); opacity: 0; }
+          70% { transform: scale(1.05); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .quick-link-card {
+          transition: all 0.2s ease !important;
+        }
+        .quick-link-card:hover {
+          transform: translateY(-4px) !important;
+          box-shadow: 0 8px 24px rgba(127,119,221,0.15) !important;
+        }
+        .hero-btn-home {
+          transition: all 0.2s ease !important;
+        }
+        .hero-btn-home:hover {
+          transform: scale(1.03) !important;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+      `}</style>
 
-      <div className="hero-card">
+      <p
+        className="greeting"
+        style={{
+          opacity: mounted ? 1 : 0,
+          animation: mounted ? "fadeSlideUp 0.4s ease 0.05s forwards" : "none",
+          animationFillMode: "both",
+        }}
+      >
+        {greeting},
+      </p>
+
+      <p
+        className="greeting-name"
+        style={{
+          opacity: mounted ? 1 : 0,
+          animation: mounted ? "fadeSlideUp 0.4s ease 0.1s forwards" : "none",
+          animationFillMode: "both",
+        }}
+      >
+        {name} 💜
+      </p>
+
+      <div
+        className="hero-card"
+        style={{
+          opacity: mounted ? 1 : 0,
+          animation: mounted ? "fadeSlideUp 0.5s ease 0.15s forwards" : "none",
+          animationFillMode: "both",
+        }}
+      >
         <h2>
           {todayLogged ? "Great job logging today!" : "Ready to log your day?"}
         </h2>
@@ -66,28 +134,70 @@ export default function Home({ session, setActivePage }) {
             : "Track your sleep, food, stress and symptoms. Get personalised PCOD tips."}
         </p>
         <button
-          className="hero-btn"
+          className="hero-btn hero-btn-home"
           onClick={() => setActivePage(todayLogged ? "insights" : "log")}
         >
           {todayLogged ? "View my insights →" : "Start today's log →"}
         </button>
       </div>
 
-      <div className="stats-row">
+      <div
+        className="stats-row"
+        style={{
+          opacity: mounted ? 1 : 0,
+          animation: mounted ? "fadeSlideUp 0.5s ease 0.2s forwards" : "none",
+          animationFillMode: "both",
+        }}
+      >
         <div className="stat-card">
-          <div className="stat-num">{logs.length}</div>
+          <div
+            className="stat-num"
+            style={{
+              animation: "popIn 0.4s ease 0.4s forwards",
+              opacity: 0,
+              animationFillMode: "both",
+            }}
+          >
+            {count}
+          </div>
           <div className="stat-label">Days logged this week</div>
         </div>
         <div className="stat-card">
-          <div className="stat-num">{todayLogged ? "✓" : "—"}</div>
+          <div
+            className="stat-num"
+            style={{
+              animation: "popIn 0.4s ease 0.5s forwards",
+              opacity: 0,
+              animationFillMode: "both",
+            }}
+          >
+            {todayLogged ? "✓" : "—"}
+          </div>
           <div className="stat-label">Today's log</div>
         </div>
       </div>
 
-      <p className="section-title">Today's PCOD tip</p>
+      <p
+        className="section-title"
+        style={{
+          opacity: mounted ? 1 : 0,
+          animation: mounted ? "fadeSlideUp 0.4s ease 0.25s forwards" : "none",
+          animationFillMode: "both",
+        }}
+      >
+        Today's PCOD tip
+      </p>
+
       <div
         className="card card-lavender"
-        style={{ display: "flex", gap: 12, alignItems: "flex-start" }}
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-start",
+          opacity: mounted ? 1 : 0,
+          animation: mounted ? "fadeSlideUp 0.4s ease 0.3s forwards" : "none",
+          animationFillMode: "both",
+        }}
       >
         <span style={{ fontSize: 28 }}>{dailyTip.icon}</span>
         <p
@@ -116,6 +226,11 @@ export default function Home({ session, setActivePage }) {
           <span
             key={t}
             className={`pill ${["Sleep", "Exercise", "Mood"].includes(t) ? "pill-purple" : "pill-pink"}`}
+            style={{ transition: "transform 0.15s ease", cursor: "default" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.transform = "scale(1.08)")
+            }
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
           >
             {t}
           </span>
@@ -129,11 +244,20 @@ export default function Home({ session, setActivePage }) {
           { icon: "🌸", label: "Cycle tracker", page: "cycle" },
           { icon: "📖", label: "Learn about PCOD", page: "learn" },
           { icon: "📝", label: "Daily log", page: "log" },
-        ].map((item) => (
+        ].map((item, i) => (
           <div
             key={item.page}
-            className="card"
-            style={{ cursor: "pointer", textAlign: "center", padding: 16 }}
+            className="card quick-link-card"
+            style={{
+              cursor: "pointer",
+              textAlign: "center",
+              padding: 16,
+              opacity: mounted ? 1 : 0,
+              animation: mounted
+                ? `fadeSlideUp 0.4s ease ${0.35 + i * 0.08}s forwards`
+                : "none",
+              animationFillMode: "both",
+            }}
             onClick={() => setActivePage(item.page)}
           >
             <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 
-const ANTHROPIC_API_KEY = process.env.REACT_APP_ANTHROPIC_KEY;
+const GROQ_API_KEY = process.env.REACT_APP_GROQ_KEY;
 
 export default function Insights({ session }) {
   const [logs, setLogs] = useState([]);
@@ -9,6 +9,11 @@ export default function Insights({ session }) {
   const [loading, setLoading] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => setMounted(true), 50);
+  }, []);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -37,46 +42,45 @@ export default function Insights({ session }) {
       .join("\n");
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `You are HerRhythm's AI health companion, specifically designed for teenage girls with PCOD (Polycystic Ovarian Disease). 
-You speak in a warm, friendly, non-clinical tone — like a knowledgeable older sister who understands PCOD deeply.
-You give personalised, actionable lifestyle advice based on the user's actual logged data.
-Always connect your advice to PCOD specifically — explain HOW and WHY habits affect PCOD symptoms (insulin resistance, cortisol, inflammation, hormones).
-Be encouraging and empowering, never judgmental.
-Format your response as JSON with this exact structure:
+      const response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            max_tokens: 1000,
+            messages: [
+              {
+                role: "system",
+                content: `You are HerRhythm's AI health companion for teenage girls with PCOD. Speak warmly like a knowledgeable older sister. Give personalised PCOD lifestyle advice based on real logged data. Always connect advice to PCOD (insulin resistance, cortisol, hormones). Be encouraging, never judgmental.
+Format response as JSON ONLY:
 {
-  "summary": "2-3 sentence warm summary of how their week looks",
-  "highlight": "one specific positive thing from their data worth celebrating",
+  "summary": "2-3 sentence warm summary",
+  "highlight": "one positive thing to celebrate",
   "tips": [
-    {"tag": "category (e.g. Sleep, Food, Exercise, Stress, Hydration)", "text": "specific personalised tip connected to PCOD"},
-    {"tag": "category", "text": "specific personalised tip"},
-    {"tag": "category", "text": "specific personalised tip"}
+    {"tag": "category", "text": "specific tip"},
+    {"tag": "category", "text": "specific tip"},
+    {"tag": "category", "text": "specific tip"}
   ],
-  "watchOut": "one gentle heads-up about something in their data that could affect PCOD"
+  "watchOut": "one gentle heads-up"
 }`,
-          messages: [
-            {
-              role: "user",
-              content: `Here is my lifestyle data from the past week:\n\n${logsummary}\n\nPlease give me personalised PCOD lifestyle insights based on my actual data.`,
-            },
-          ],
-        }),
-      });
+              },
+              {
+                role: "user",
+                content: `My lifestyle data from the past week:\n\n${logsummary}\n\nPlease give me personalised PCOD lifestyle insights.`,
+              },
+            ],
+          }),
+        },
+      );
 
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
-
-      const text = data.content[0].text;
+      const text = data.choices[0].message.content;
       const clean = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
       setInsights(parsed);
@@ -105,16 +109,74 @@ Format your response as JSON with this exact structure:
   if (loadingLogs)
     return (
       <div className="page">
-        <div className="loading-insights">
-          <div className="loading-spinner"></div>
-          <p className="loading-text">Loading your data...</p>
+        <style>{`
+        @keyframes shimmerSlide {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .skeleton {
+          background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--purple-50) 50%, var(--bg-secondary) 75%);
+          background-size: 200% 100%;
+          animation: shimmerSlide 1.5s infinite;
+          border-radius: var(--radius-md);
+        }
+      `}</style>
+        <div style={{ marginBottom: 20 }}>
+          <div
+            className="skeleton"
+            style={{ height: 28, width: 180, marginBottom: 8 }}
+          />
+          <div className="skeleton" style={{ height: 16, width: 120 }} />
         </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: 10,
+            marginBottom: 20,
+          }}
+        >
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton" style={{ height: 72 }} />
+          ))}
+        </div>
+        <div className="skeleton" style={{ height: 120, marginBottom: 12 }} />
+        <div className="skeleton" style={{ height: 80, marginBottom: 12 }} />
+        <div className="skeleton" style={{ height: 80 }} />
       </div>
     );
 
   return (
     <div className="page">
-      <h2 style={{ fontSize: 22, fontWeight: 500, marginBottom: 4 }}>
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes popIn {
+          0% { transform: scale(0.8); opacity: 0; }
+          70% { transform: scale(1.05); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .tip-card-animated {
+          transition: all 0.2s ease !important;
+        }
+        .tip-card-animated:hover {
+          transform: translateX(4px) !important;
+          border-left-color: var(--pink-400) !important;
+        }
+      `}</style>
+
+      <h2
+        style={{
+          fontSize: 22,
+          fontWeight: 500,
+          marginBottom: 4,
+          opacity: mounted ? 1 : 0,
+          animation: mounted ? "fadeSlideUp 0.4s ease forwards" : "none",
+          animationFillMode: "both",
+        }}
+      >
         Your insights ✨
       </h2>
       <p
@@ -122,6 +184,9 @@ Format your response as JSON with this exact structure:
           fontSize: 13,
           color: "var(--text-secondary)",
           marginBottom: 20,
+          opacity: mounted ? 1 : 0,
+          animation: mounted ? "fadeSlideUp 0.4s ease 0.1s forwards" : "none",
+          animationFillMode: "both",
         }}
       >
         Based on your last {logs.length} log{logs.length !== 1 ? "s" : ""}
@@ -130,7 +195,11 @@ Format your response as JSON with this exact structure:
       {logs.length === 0 ? (
         <div
           className="card card-lavender"
-          style={{ textAlign: "center", padding: 32 }}
+          style={{
+            textAlign: "center",
+            padding: 32,
+            animation: "popIn 0.4s ease forwards",
+          }}
         >
           <div style={{ fontSize: 40, marginBottom: 12 }}>📝</div>
           <p
@@ -162,24 +231,36 @@ Format your response as JSON with this exact structure:
               marginBottom: 20,
             }}
           >
-            <div className="stat-card">
-              <div className="stat-num">{avgSleep}h</div>
-              <div className="stat-label">Avg sleep</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-num">{avgStress}/10</div>
-              <div className="stat-label">Avg stress</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-num">{exerciseDays}</div>
-              <div className="stat-label">Active days</div>
-            </div>
+            {[
+              { num: `${avgSleep}h`, label: "Avg sleep" },
+              { num: `${avgStress}/10`, label: "Avg stress" },
+              { num: exerciseDays, label: "Active days" },
+            ].map((s, i) => (
+              <div
+                key={i}
+                className="stat-card"
+                style={{
+                  animation: `popIn 0.4s ease ${0.1 + i * 0.1}s forwards`,
+                  opacity: 0,
+                  animationFillMode: "both",
+                }}
+              >
+                <div className="stat-num">{s.num}</div>
+                <div className="stat-label">{s.label}</div>
+              </div>
+            ))}
           </div>
 
           {!insights && !loading && (
             <div
               className="card card-lavender"
-              style={{ textAlign: "center", padding: 28 }}
+              style={{
+                textAlign: "center",
+                padding: 28,
+                animation: "popIn 0.4s ease 0.2s forwards",
+                opacity: 0,
+                animationFillMode: "both",
+              }}
             >
               <div style={{ fontSize: 36, marginBottom: 12 }}>🤖</div>
               <p
@@ -206,7 +287,22 @@ Format your response as JSON with this exact structure:
               <button
                 className="btn-primary"
                 onClick={getInsights}
-                style={{ maxWidth: 240, margin: "0 auto" }}
+                style={{
+                  maxWidth: 240,
+                  margin: "0 auto",
+                  position: "relative",
+                  overflow: "hidden",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow =
+                    "0 8px 20px rgba(127,119,221,0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
               >
                 Get my insights →
               </button>
@@ -229,14 +325,23 @@ Format your response as JSON with this exact structure:
             </div>
           )}
 
-          {error && <div className="error-msg">{error}</div>}
+          {error && (
+            <div
+              className="error-msg"
+              style={{ animation: "shake 0.4s ease forwards" }}
+            >
+              {error}
+            </div>
+          )}
 
           {insights && (
             <>
-              <div className="ai-bubble">
+              <div
+                className="ai-bubble"
+                style={{ animation: "fadeSlideUp 0.4s ease forwards" }}
+              >
                 <div className="ai-from">
-                  <div className="ai-dot"></div>
-                  HerRhythm AI
+                  <div className="ai-dot"></div>HerRhythm AI
                 </div>
                 <p className="ai-text">{insights.summary}</p>
               </div>
@@ -250,6 +355,9 @@ Format your response as JSON with this exact structure:
                     display: "flex",
                     gap: 10,
                     alignItems: "flex-start",
+                    animation: "fadeSlideUp 0.4s ease 0.1s forwards",
+                    opacity: 0,
+                    animationFillMode: "both",
                   }}
                 >
                   <span style={{ fontSize: 20 }}>🌸</span>
@@ -281,7 +389,15 @@ Format your response as JSON with this exact structure:
                 Personalised tips for you
               </p>
               {insights.tips?.map((tip, i) => (
-                <div key={i} className="tip-card">
+                <div
+                  key={i}
+                  className="tip-card tip-card-animated"
+                  style={{
+                    animation: `fadeSlideUp 0.4s ease ${0.15 + i * 0.1}s forwards`,
+                    opacity: 0,
+                    animationFillMode: "both",
+                  }}
+                >
                   <span className="tip-tag">{tip.tag}</span>
                   <p className="tip-text">{tip.text}</p>
                 </div>
@@ -296,6 +412,9 @@ Format your response as JSON with this exact structure:
                     display: "flex",
                     gap: 10,
                     alignItems: "flex-start",
+                    animation: "fadeSlideUp 0.4s ease 0.4s forwards",
+                    opacity: 0,
+                    animationFillMode: "both",
                   }}
                 >
                   <span style={{ fontSize: 20 }}>⚠️</span>
@@ -326,7 +445,16 @@ Format your response as JSON with this exact structure:
               <button
                 className="btn-secondary"
                 onClick={getInsights}
-                style={{ marginTop: 16 }}
+                style={{
+                  marginTop: 16,
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.transform = "translateY(-2px)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.transform = "translateY(0)")
+                }
               >
                 Refresh insights
               </button>
