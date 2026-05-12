@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient'
 
 export default function Home({ session, setActivePage }) {
   const [todayLogged, setTodayLogged] = useState(false)
-  const [logCount, setLogCount] = useState(0)
+  const [, setLogCount] = useState(0)
   const [count, setCount] = useState(0)
   const [mounted, setMounted] = useState(false)
 
