@@ -4,7 +4,7 @@ const GROQ_API_KEY = process.env.REACT_APP_GROQ_KEY;
 
 export default function DoctorPrep({ session }) {
   const [step, setStep] = useState("intro");
-  const [loading, setLoading] = useState(false)
+  const [, setLoading] = useState(false)
   const [result, setResult] = useState(null);
   const [answers, setAnswers] = useState({
     visitReason: "",
